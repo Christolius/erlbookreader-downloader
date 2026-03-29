@@ -7,7 +7,7 @@ export default async (request) => {
   sm.append('data_file', file);
   sm.append('config', JSON.stringify({
     type: 'transcription',
-    transcription_config: { language: 'en' }
+    transcription_config: { language: 'id' }
   }));
 
   const res = await fetch('https://asr.api.speechmatics.com/v2/jobs/', {
