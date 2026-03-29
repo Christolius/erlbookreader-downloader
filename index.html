@@ -383,7 +383,8 @@
 
 </main>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+
 <script>
   let audioBlob = null;
   let blobUrl = null;
@@ -430,7 +431,11 @@
         scanning = false;
         clearInterval(scanTimer);
         stopCamera();
-        loadAudio(code.data);
+        const url = code.data;
+        const id = new URL(url).searchParams.get('id');
+        const prefix = id.split('.')[0];
+        const audioUrl = `https://media.erlanggaonline.co.id/data/${prefix}/${id}.mp3`;
+        loadAudio(audioUrl);
       } else {
         document.getElementById('scan-status').textContent = 'QR found but not a URL: ' + code.data;
       }
