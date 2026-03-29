@@ -497,50 +497,50 @@
     }
   }
 
-  function startTranscription() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognition = new SR();
-    recognition.continuous     = true;
-    recognition.interimResults = true;
-    recognition.lang           = 'en-US';
-
-    finalText = '';
-    document.getElementById('transcript').innerHTML = '';
-
-    recognition.onresult = e => {
-      let interim = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const t = e.results[i][0].transcript;
-        e.results[i].isFinal ? (finalText += t + ' ') : (interim += t);
-      }
-      document.getElementById('transcript').innerHTML =
-        finalText + '<span class="interim">' + interim + '</span>';
-    };
-
-    recognition.onend = () => {
-      setStatus(false);
-      document.getElementById('start-btn').style.display = 'inline-flex';
-      document.getElementById('stop-btn').style.display  = 'none';
-    };
-
-    recognition.onerror = e => {
-      setStatus(false);
-      document.getElementById('t-label').textContent = 'Error: ' + e.error;
-    };
-
-    recognition.start();
-    document.getElementById('player-2').play();
-    setStatus(true);
+  async function startTranscription() {
     document.getElementById('start-btn').style.display = 'none';
-    document.getElementById('stop-btn').style.display  = 'inline-flex';
-  }
+    document.getElementById('stop-btn').style.display = 'none';
+    setStatus(true);
+    finalText = '';
+    document.getElementById('transcript').innerHTML = 'Uploading audio...';
 
-  function stopTranscription() {
-    recognition?.stop();
-    document.getElementById('player-2').pause();
+    const form = new FormData();
+    form.append('audio', audioBlob, 'audio.mp3');
+
+    const submitRes = await fetch('/transcribe', { method: 'POST', body: form });
+    const job = await submitRes.json();
+
+    if (!job.id) {
+      document.getElementById('transcript').innerHTML = 'Failed to submit job.';
+      setStatus(false);
+      return;
+    }
+
+    document.getElementById('transcript').innerHTML = 'Transcribing...';
+
+    const result = await pollTranscript(job.id);
+    document.getElementById('transcript').innerHTML = result;
     setStatus(false);
     document.getElementById('start-btn').style.display = 'inline-flex';
-    document.getElementById('stop-btn').style.display  = 'none';
+  }
+
+  async function pollTranscript(jobId) {
+    const apiKey = null;
+
+    while (true) {
+      await new Promise(r => setTimeout(r, 3000));
+
+      const res = await fetch(`/transcript?job=${jobId}`);
+      const data = await res.json();
+
+      if (data.job?.status === 'done') {
+        return data.results?.map(r => r.alternatives?.[0]?.content).join(' ') || 'No transcript found.';
+      }
+
+      if (data.job?.status === 'rejected') {
+        return 'Transcription failed: ' + (data.job.errors?.[0]?.message || 'unknown error');
+      }
+    }
   }
 
   function setStatus(on) {

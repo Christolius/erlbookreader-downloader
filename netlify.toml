@@ -1,3 +1,11 @@
 [[edge_functions]]
 path = "/proxy"
 function = "proxy"
+
+[[edge_functions]]
+path = "/transcribe"
+function = "transcribe"
+
+[[edge_functions]]
+path = "/transcript"
+function = "transcript"
