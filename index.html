@@ -533,6 +533,8 @@
       const res = await fetch(`/transcript?job=${jobId}`);
       const data = await res.json();
 
+      console.log(data);
+
       if (data.job?.status === 'done') {
         return data.results?.map(r => r.alternatives?.[0]?.content).join(' ') || 'No transcript found.';
       }
