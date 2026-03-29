@@ -1,5 +1,5 @@
 export default async (request) => {
-  const apiKey = Deno.env.get('SPEECHMATICS_API_KEY');
+  const apiKey = Deno.env.get('transcriber_key');
   const jobId = new URL(request.url).searchParams.get('job');
 
   const res = await fetch(`https://asr.api.speechmatics.com/v2/jobs/${jobId}/transcript?format=json-v2`, {

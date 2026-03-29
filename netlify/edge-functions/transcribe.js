@@ -1,5 +1,5 @@
 export default async (request) => {
-  const apiKey = Deno.env.get('SPEECHMATICS_API_KEY');
+  const apiKey = Deno.env.get('transcriber_key');
   const formData = await request.formData();
   const file = formData.get('audio');
 
