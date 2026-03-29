@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AUDIOLIFT</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0d0d;
+      --surface: #161616;
+      --border: #2a2a2a;
+      --text: #e8e0d0;
+      --muted: #555;
+      --accent: #e8a23a;
+      --accent-dim: rgba(232,162,58,0.12);
+      --success: #5ae8a2;
+      --danger: #e85a3a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'IBM Plex Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+    }
+
+    header h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      letter-spacing: 5px;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    header span {
+      font-size: 0.62rem;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    main {
+      flex: 1;
+      padding: 36px 32px;
+      max-width: 640px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .step { display: none; animation: fadeIn 0.25s ease; }
+    .step.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .step-label {
+      font-size: 0.6rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    .step-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      letter-spacing: 0.5px;
+    }
+
+    .camera-wrap {
+      position: relative;
+      aspect-ratio: 1;
+      max-width: 380px;
+      margin: 0 auto;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      background: #000;
+    }
+
+    #video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    #canvas { display: none; }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .frame {
+      width: 58%;
+      aspect-ratio: 1;
+      position: relative;
+    }
+
+    .frame::before, .frame::after,
+    .frame span::before, .frame span::after {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-color: var(--accent);
+      border-style: solid;
+    }
+
+    .frame::before  { top: 0; left: 0;  border-width: 2px 0 0 2px; }
+    .frame::after   { top: 0; right: 0; border-width: 2px 2px 0 0; }
+    .frame span::before { bottom: 0; left: 0;  border-width: 0 0 2px 2px; }
+    .frame span::after  { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+
+    .scan-line {
+      position: absolute;
+      left: 8%; right: 8%;
+      height: 1px;
+      background: var(--accent);
+      opacity: 0.6;
+      animation: scanMove 2.2s ease-in-out infinite;
+    }
+
+    @keyframes scanMove {
+      0%, 100% { top: 15%; }
+      50%       { top: 82%; }
+    }
+
+    .scan-status {
+      text-align: center;
+      margin-top: 14px;
+      font-size: 0.68rem;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 28px 0;
+    }
+
+    input[type=text] {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 11px 14px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.73rem;
+      color: var(--text);
+      outline: none;
+      margin-bottom: 12px;
+      transition: border-color 0.15s;
+    }
+
+    input[type=text]:focus { border-color: var(--accent); }
+    input[type=text]::placeholder { color: var(--muted); }
+
+    .url-display {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      padding: 10px 14px;
+      font-size: 0.68rem;
+      color: var(--accent);
+      word-break: break-all;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 11px 22px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: all 0.12s;
+      user-select: none;
+    }
+
+    .btn-primary  { background: var(--accent);  color: #000; }
+    .btn-primary:hover { background: #f0b04a; }
+    .btn-primary:disabled { background: #333; color: var(--muted); cursor: not-allowed; }
+
+    .btn-outline  { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-outline:hover { border-color: var(--text); }
+
+    .btn-success  { background: var(--success); color: #000; }
+    .btn-success:hover { background: #6af0b0; }
+
+    .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    audio {
+      width: 100%;
+      margin-bottom: 18px;
+      accent-color: var(--accent);
+    }
+
+    .info-box {
+      background: var(--accent-dim);
+      border: 1px solid rgba(232,162,58,0.25);
+      padding: 11px 14px;
+      font-size: 0.68rem;
+      color: var(--accent);
+      margin-bottom: 18px;
+      line-height: 1.7;
+    }
+
+    .warn-box {
+      background: rgba(232,90,58,0.08);
+      border: 1px solid rgba(232,90,58,0.25);
+      padding: 11px 14px;
+      font-size: 0.68rem;
+      color: #e88a70;
+      margin-bottom: 18px;
+      line-height: 1.7;
+      display: none;
+    }
+
+    .transcript-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 18px;
+      min-height: 180px;
+      font-size: 0.82rem;
+      line-height: 1.9;
+      color: var(--text);
+      margin-top: 18px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .interim { color: var(--muted); }
+
+    .t-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 0.62rem;
+      color: var(--muted);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .dot.on {
+      background: var(--success);
+      animation: blink 1s ease infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.2; }
+    }
+
+    @media (max-width: 500px) {
+      main   { padding: 24px 16px; }
+      header { padding: 14px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>AUDIOLIFT</h1>
+  <span>QR → MP3 → Transcript</span>
+</header>
+
+<main>
+
+  <div class="step active" id="step-scan">
+    <div class="step-label">Step 01</div>
+    <div class="step-title">Scan QR Code</div>
+
+    <div class="camera-wrap" id="camera-wrap">
+      <video id="video" playsinline autoplay muted></video>
+      <canvas id="canvas"></canvas>
+      <div class="overlay">
+        <div class="frame">
+          <span></span>
+          <div class="scan-line"></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="scan-status" id="scan-status">Starting camera...</p>
+
+    <div class="divider"></div>
+
+    <div class="step-label">Or paste URL directly</div>
+    <input type="text" id="manual-url" placeholder="https://example.com/audio.mp3" />
+    <button class="btn btn-primary" onclick="useManualUrl()">Use URL</button>
+  </div>
+
+  <div class="step" id="step-fetch">
+    <div class="step-label">Step 02</div>
+    <div class="step-title">MP3 Loaded</div>
+
+    <div class="url-display" id="detected-url"></div>
+
+    <div class="info-box" id="extracted-notice" style="display:none">
+      ℹ URL pointed to a webpage — extracted the audio source automatically.
+    </div>
+
+    <div class="warn-box" id="cors-warn">
+      ⚠ Could not fetch the file directly — the server may be blocking cross-origin requests. The audio may still play via direct link, but download might not work.
+    </div>
+
+    <audio id="player-1" controls></audio>
+
+    <div class="btn-group">
+      <a class="btn btn-success" id="dl-btn">↓ Download MP3</a>
+      <button class="btn btn-primary" onclick="goToTranscribe()">→ Transcribe</button>
+      <button class="btn btn-outline" onclick="restart()">↺ Scan Again</button>
+    </div>
+  </div>
+
+  <div class="step" id="step-transcribe">
+    <div class="step-label">Step 03</div>
+    <div class="step-title">Transcribe Audio</div>
+
+    <div class="info-box" id="info-msg">
+      ℹ The browser listens through your microphone while audio plays through your speakers. Turn volume up and minimize background noise for best results.
+    </div>
+
+    <div class="warn-box" id="no-speech-warn" style="display:none">
+      ✗ Web Speech API not supported. Try Chrome or Edge on desktop.
+    </div>
+
+    <audio id="player-2" controls></audio>
+
+    <div class="btn-group" style="margin-top:4px">
+      <button class="btn btn-primary" id="start-btn" onclick="startTranscription()">▶ Start Transcription</button>
+      <button class="btn btn-outline"  id="stop-btn"  onclick="stopTranscription()" style="display:none">■ Stop</button>
+    </div>
+
+    <div class="transcript-box" id="transcript">Transcript will appear here...</div>
+
+    <div class="t-status">
+      <div class="dot" id="dot"></div>
+      <span id="t-label">Idle</span>
+    </div>
+
+    <div class="btn-group" style="margin-top:16px">
+      <button class="btn btn-outline" onclick="copyTranscript()">⎘ Copy Transcript</button>
+      <button class="btn btn-outline" onclick="restart()">↺ Scan Again</button>
+    </div>
+  </div>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script>
+  let audioBlob = null;
+  let blobUrl = null;
+  let recognition = null;
+  let finalText = '';
+  let scanning = false;
+  let scanTimer = null;
+
+  const video  = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+
+  async function initCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = stream;
+      scanning = true;
+      document.getElementById('scan-status').textContent = 'Point camera at QR code...';
+      scanTimer = setInterval(scanFrame, 250);
+    } catch {
+      document.getElementById('scan-status').textContent = 'Camera unavailable — enter URL below.';
+      document.getElementById('camera-wrap').style.display = 'none';
+    }
+  }
+
+  function scanFrame() {
+    if (!scanning || video.readyState !== video.HAVE_ENOUGH_DATA) return;
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(img.data, img.width, img.height);
+    if (code && /^https?:\/\//.test(code.data)) {
+      scanning = false;
+      clearInterval(scanTimer);
+      stopCamera();
+      loadAudio(code.data);
+    }
+  }
+
+  function stopCamera() {
+    video.srcObject?.getTracks().forEach(t => t.stop());
+  }
+
+  function useManualUrl() {
+    const url = document.getElementById('manual-url').value.trim();
+    if (!url) return;
+    stopCamera();
+    clearInterval(scanTimer);
+    loadAudio(url);
+  }
+
+  async function loadAudio(url) {
+    showStep('step-fetch');
+    document.getElementById('detected-url').textContent = url;
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error();
+
+      const contentType = res.headers.get('content-type') || '';
+
+      if (contentType.includes('text/html')) {
+        const html = await res.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        const sourceEl = doc.querySelector('source[src]');
+        const audioEl  = doc.querySelector('audio[src]');
+        const extracted = (sourceEl || audioEl)?.getAttribute('src');
+
+        if (!extracted) throw new Error('no-audio-found');
+
+        const resolvedUrl = new URL(extracted, url).href;
+        document.getElementById('detected-url').textContent = resolvedUrl;
+        document.getElementById('extracted-notice').style.display = 'block';
+        return loadAudio(resolvedUrl);
+      }
+
+      audioBlob = await res.blob();
+      blobUrl   = URL.createObjectURL(audioBlob);
+
+      document.getElementById('player-1').src = blobUrl;
+
+      const dl  = document.getElementById('dl-btn');
+      dl.href   = blobUrl;
+      dl.download = url.split('/').pop().split('?')[0] || 'audio.mp3';
+
+    } catch (e) {
+      if (e.message === 'no-audio-found') {
+        document.getElementById('cors-warn').textContent =
+          '✗ The URL points to a webpage but no audio source tag was found inside it.';
+      }
+      document.getElementById('cors-warn').style.display = 'block';
+      document.getElementById('player-1').src = url;
+      const dl = document.getElementById('dl-btn');
+      dl.href = url;
+      dl.target = '_blank';
+    }
+  }
+
+  function goToTranscribe() {
+    showStep('step-transcribe');
+    document.getElementById('player-2').src = blobUrl || document.getElementById('player-1').src;
+
+    if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+      document.getElementById('no-speech-warn').style.display = 'block';
+      document.getElementById('info-msg').style.display = 'none';
+      document.getElementById('start-btn').disabled = true;
+    }
+  }
+
+  function startTranscription() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SR();
+    recognition.continuous     = true;
+    recognition.interimResults = true;
+    recognition.lang           = 'en-US';
+
+    finalText = '';
+    document.getElementById('transcript').innerHTML = '';
+
+    recognition.onresult = e => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        e.results[i].isFinal ? (finalText += t + ' ') : (interim += t);
+      }
+      document.getElementById('transcript').innerHTML =
+        finalText + '<span class="interim">' + interim + '</span>';
+    };
+
+    recognition.onend = () => {
+      setStatus(false);
+      document.getElementById('start-btn').style.display = 'inline-flex';
+      document.getElementById('stop-btn').style.display  = 'none';
+    };
+
+    recognition.onerror = e => {
+      setStatus(false);
+      document.getElementById('t-label').textContent = 'Error: ' + e.error;
+    };
+
+    recognition.start();
+    document.getElementById('player-2').play();
+    setStatus(true);
+    document.getElementById('start-btn').style.display = 'none';
+    document.getElementById('stop-btn').style.display  = 'inline-flex';
+  }
+
+  function stopTranscription() {
+    recognition?.stop();
+    document.getElementById('player-2').pause();
+    setStatus(false);
+    document.getElementById('start-btn').style.display = 'inline-flex';
+    document.getElementById('stop-btn').style.display  = 'none';
+  }
+
+  function setStatus(on) {
+    const dot   = document.getElementById('dot');
+    const label = document.getElementById('t-label');
+    dot.classList.toggle('on', on);
+    label.textContent = on ? 'Listening...' : (finalText ? 'Done' : 'Idle');
+  }
+
+  function copyTranscript() {
+    const text = document.getElementById('transcript').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = event.target;
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copied!';
+      setTimeout(() => btn.textContent = orig, 1500);
+    });
+  }
+
+  function showStep(id) {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function restart() {
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
+    audioBlob = null; blobUrl = null; finalText = '';
+    scanning = true;
+    showStep('step-scan');
+    initCamera();
+  }
+
+  initCamera();
+</script>
+</body>
+</html>
