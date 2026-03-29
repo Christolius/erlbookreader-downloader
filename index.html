@@ -535,12 +535,12 @@
 
       console.log(data);
 
-      if (data.job?.status === 'done') {
-        return data.results?.map(r => r.alternatives?.[0]?.content).join(' ') || 'No transcript found.';
+      if (data.error == "Transcription not ready"){
+        continue;
       }
 
-      if (data.job?.status === 'rejected') {
-        return 'Transcription failed: ' + (data.job.errors?.[0]?.message || 'unknown error');
+      if (data.job) {
+        return data.results?.map(r => r.alternatives?.[0]?.content).join(' ') || 'No transcript found.';
       }
     }
   }
