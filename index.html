@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AUDIOLIFT</title>
+  <title>erlbookreader transcriber</title>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Bebas+Neue&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -296,7 +296,7 @@
 <body>
 
 <header>
-  <h1>AUDIOLIFT</h1>
+  <h1>Erlangga Book Reader Transcriber</h1>
   <span>QR → MP3 → Transcript</span>
 </header>
 
@@ -397,11 +397,14 @@
 
   async function initCamera() {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } });
       video.srcObject = stream;
-      scanning = true;
-      document.getElementById('scan-status').textContent = 'Point camera at QR code...';
-      scanTimer = setInterval(scanFrame, 250);
+      video.onloadedmetadata = () => {
+        video.play();
+        scanning = true;
+        document.getElementById('scan-status').textContent = 'Point camera at QR code...';
+        scanTimer = setInterval(scanFrame, 200);
+      };
     } catch {
       document.getElementById('scan-status').textContent = 'Camera unavailable — enter URL below.';
       document.getElementById('camera-wrap').style.display = 'none';
@@ -409,18 +412,28 @@
   }
 
   function scanFrame() {
-    if (!scanning || video.readyState !== video.HAVE_ENOUGH_DATA) return;
+    if (!scanning) return;
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+    if (typeof jsQR === 'undefined') { console.warn('jsQR not loaded'); return; }
+    if (video.videoWidth === 0) return;
+
     canvas.width  = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(img.data, img.width, img.height);
-    if (code && /^https?:\/\//.test(code.data)) {
-      scanning = false;
-      clearInterval(scanTimer);
-      stopCamera();
-      loadAudio(code.data);
+    const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+
+    if (code) {
+      console.log('QR detected:', code.data);
+      if (/^https?:\/\//.test(code.data)) {
+        scanning = false;
+        clearInterval(scanTimer);
+        stopCamera();
+        loadAudio(code.data);
+      } else {
+        document.getElementById('scan-status').textContent = 'QR found but not a URL: ' + code.data;
+      }
     }
   }
 
